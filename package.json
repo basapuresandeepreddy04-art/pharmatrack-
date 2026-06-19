@@ -1,0 +1,12 @@
+{
+  "name": "pharma-inventory",
+  "version": "1.0.0",
+  "description": "PharmaTrack - Inventory & Expiry Alert System",
+  "scripts": {
+    "install:all": "npm --prefix backend install && npm --prefix frontend install",
+    "dev:backend":  "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "build": "npm --prefix frontend run build"
+  }
+}
