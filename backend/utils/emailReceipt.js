@@ -9,8 +9,8 @@ const sendSaleReceiptEmail = async (sale, items = []) => {
     <tr>
       <td style="padding:8px;border-bottom:1px solid #eee">${it.medicine.name}</td>
       <td style="padding:8px;border-bottom:1px solid #eee;text-align:center">${it.quantity}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${it.unit_price.toFixed(2)}</td>
-      <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${it.subtotal.toFixed(2)}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.unit_price).toFixed(2)}</td>
+      <td style="padding:8px;border-bottom:1px solid #eee;text-align:right">₹${Number(it.subtotal).toFixed(2)}</td>
     </tr>
   `).join('');
 
@@ -34,7 +34,9 @@ const sendSaleReceiptEmail = async (sale, items = []) => {
           </thead>
           <tbody>${itemRows}</tbody>
         </table>
-        <h3 style="text-align:right;color:#028090">Total: ₹${Number(sale.total_amount).toFixed(2)}</h3>
+        <h3 style="text-align:right;color:#028090">
+          Total: ₹${Number(sale.total_amount).toFixed(2)}
+        </h3>
         <p style="color:#999;font-size:12px">Thank you for your purchase!</p>
       </div>
     `,

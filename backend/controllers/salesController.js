@@ -2,7 +2,7 @@ const { sendSaleReceiptEmail } = require('../utils/emailReceipt');
 const { pool } = require('../config/db');
 const { syncAlerts } = require('./medicineController');
 const { notifySaleCompleted } = require('../utils/whatsapp');
-
+const { sendSaleReceiptEmail } = require('../utils/emailReceipt');
 const generateInvoiceNumber = () => {
   const now = new Date();
   const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
