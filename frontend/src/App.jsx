@@ -26,14 +26,14 @@ export default function App() {
     <AuthProvider>
       <Routes>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
+        <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-          <Route path="dashboard"  element={<DashboardPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="medicines"  element={<MedicinesPage />} />
-          <Route path="sales"      element={<SalesPage />} />
-          <Route path="alerts"     element={<AlertsPage />} />
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="medicines" element={<MedicinesPage />} />
+          <Route path="sales" element={<SalesPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
         </Route>
       </Routes>
     </AuthProvider>
