@@ -1,3 +1,4 @@
+const { sendSaleReceiptEmail } = require('../utils/emailReceipt');
 const { pool } = require('../config/db');
 const { syncAlerts } = require('./medicineController');
 const { notifySaleCompleted } = require('../utils/whatsapp');
@@ -85,6 +86,7 @@ const createSale = async (req, res) => {
 
     // Fire-and-forget WhatsApp notification — never blocks or fails the response.
     notifySaleCompleted(sale).catch(() => {});
+    sendSaleReceiptEmail(sale, lineItems).catch(() => {});
 
     res.status(201).json({
       success: true,
