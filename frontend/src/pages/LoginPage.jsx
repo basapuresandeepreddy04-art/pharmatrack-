@@ -80,6 +80,9 @@ export default function LoginPage() {
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
               {loading ? 'Signing in…' : 'Sign in'}
+              <p className="text-center text-xs text-slate-500 mt-3">
+  <Link to="/forgot-password" className="text-brand-600 hover:underline">Forgot Password?</Link>
+</p>
             </button>
           </form>
 

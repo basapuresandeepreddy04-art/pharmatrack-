@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage';
 import MedicinesPage from './pages/MedicinesPage';
 import SalesPage from './pages/SalesPage';
 import AlertsPage from './pages/AlertsPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="dashboard"  element={<DashboardPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="medicines"  element={<MedicinesPage />} />
           <Route path="sales"      element={<SalesPage />} />
           <Route path="alerts"     element={<AlertsPage />} />
