@@ -55,8 +55,17 @@ export default function LoginPage() {
                 className="input-field"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-slate-600">Password</label>
+                <Link
+                  to="/forgot-password"
+                  className="text-xs text-brand-600 hover:text-brand-700 hover:underline font-medium"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   name="password"
@@ -77,10 +86,29 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full justify-center py-2.5"
+            >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-500 mt-3">
-            <Link to="/forgot-password"
+          <div className="mt-4 p-3 bg-brand-50 rounded-lg">
+            <p className="text-xs text-brand-700 font-medium">Demo credentials</p>
+            <p className="text-xs text-brand-600 mt-0.5">owner@pharma.com · owner123</p>
+          </div>
+        </div>
+
+        <p className="text-center text-sm text-slate-500 mt-4">
+          No account?{' '}
+          <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium">
+            Register here
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
