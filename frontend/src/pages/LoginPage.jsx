@@ -32,7 +32,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-white to-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-brand-600 rounded-2xl mb-4 shadow-lg shadow-brand-200">
             <FlaskConical className="w-6 h-6 text-white" />
@@ -80,26 +79,8 @@ export default function LoginPage() {
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
               {loading ? 'Signing in…' : 'Sign in'}
-              <p className="text-center text-xs text-slate-500 mt-3">
-  <Link to="/forgot-password" className="text-brand-600 hover:underline">Forgot Password?</Link>
-</p>
             </button>
           </form>
 
-          {/* Demo hint */}
-          <div className="mt-4 p-3 bg-brand-50 rounded-lg">
-            <p className="text-xs text-brand-700 font-medium">Demo credentials</p>
-            <p className="text-xs text-brand-600 mt-0.5">owner@pharma.com · owner123</p>
-          </div>
-        </div>
-
-        <p className="text-center text-sm text-slate-500 mt-4">
-          No account?{' '}
-          <Link to="/register" className="text-brand-600 hover:text-brand-700 font-medium">
-            Register here
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-}
+          <p className="text-center text-xs text-slate-500 mt-3">
+            <Link to="/forgot-password"
