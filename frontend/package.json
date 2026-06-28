@@ -1,7 +1,6 @@
 {
   "name": "pharma-inventory-frontend",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",
@@ -9,7 +8,10 @@
     "react-router-dom": "^6.11.0",
     "axios": "^1.4.0",
     "react-hot-toast": "^2.4.1",
-    "lucide-react": "^0.263.1"
+    "lucide-react": "^0.263.1",
+    "jspdf": "^2.5.1",
+    "html2canvas": "^1.4.1",
+    "pptxgenjs": "^3.12.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
