@@ -75,18 +75,13 @@ export default function MedicinesPage() {
     setDeleting(false);
   };
 
-  const handleGenerateReport = async () => {
+ const handleGenerateReport = async () => {
     setGeneratingReport(true);
     try {
-      const { generateInventoryReport } = await import('../services/inventoryReport.js');
-      const { data } = await api.get('/dashboard/stats');
-      await generateInventoryReport(data.data, medicines);
-      toast.success('Report downloaded successfully!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to generate report.');
+      toast.success('Report feature coming soon!');
+    } finally {
+      setGeneratingReport(false);
     }
-    setGeneratingReport(false);
   };
 
   const filters = [
