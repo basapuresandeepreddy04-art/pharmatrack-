@@ -29,7 +29,8 @@ const getAllMedicines = async (req, res) => {
     `, [req.user.id]);
     res.json({ success: true, data: rows });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch medicines.' });
+    console.error('Get medicines error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -42,7 +43,8 @@ const getMedicineById = async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ success: false, message: 'Medicine not found.' });
     res.json({ success: true, data: rows[0] });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch medicine.' });
+    console.error('Get medicine error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -60,7 +62,8 @@ const createMedicine = async (req, res) => {
     const [newMed] = await pool.query('SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_until_expiry FROM medicines WHERE id = ?', [result.insertId]);
     res.status(201).json({ success: true, message: 'Medicine added successfully.', data: newMed[0] });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to add medicine.' });
+    console.error('Create medicine error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -81,7 +84,8 @@ const updateMedicine = async (req, res) => {
     const [updated] = await pool.query('SELECT *, DATEDIFF(expiry_date, CURDATE()) AS days_until_expiry FROM medicines WHERE id = ?', [id]);
     res.json({ success: true, message: 'Medicine updated successfully.', data: updated[0] });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to update medicine.' });
+    console.error('Update medicine error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -92,7 +96,8 @@ const deleteMedicine = async (req, res) => {
     await pool.query('DELETE FROM medicines WHERE id = ? AND created_by = ?', [req.params.id, req.user.id]);
     res.json({ success: true, message: `"${existing[0].name}" deleted successfully.` });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to delete medicine.' });
+    console.error('Delete medicine error:', err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 

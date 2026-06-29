@@ -1,5 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Pencil, Trash2, AlertTriangle, Clock, CheckCircle, RefreshCw } from 'lucide-react';
+import {
+  Plus, Search, Pencil, Trash2, AlertTriangle,
+  Clock, CheckCircle, RefreshCw, FileDown,
+} from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import MedicineModal from '../components/MedicineModal';
@@ -7,32 +10,31 @@ import DeleteDialog from '../components/DeleteDialog';
 
 const getStatusBadge = (m) => {
   const days = m.days_until_expiry;
-  const isExpired     = days < 0;
-  const isExpiring    = days >= 0 && days <= 30;
-  const isLowStock    = m.stock_quantity < 10;
-
-  if (isExpired)    return <span className="badge-red"><Clock className="w-3 h-3" /> Expired</span>;
+  const isExpired  = days < 0;
+  const isExpiring = days >= 0 && days <= 30;
+  const isLowStock = m.stock_quantity < 10;
+  if (isExpired)              return <span className="badge-red"><Clock className="w-3 h-3" /> Expired</span>;
   if (isLowStock && isExpiring) return <span className="badge-red"><AlertTriangle className="w-3 h-3" /> Critical</span>;
-  if (isLowStock)   return <span className="badge-red"><AlertTriangle className="w-3 h-3" /> Low Stock</span>;
-  if (isExpiring)   return <span className="badge-amber"><Clock className="w-3 h-3" /> Expiring Soon</span>;
+  if (isLowStock)             return <span className="badge-red"><AlertTriangle className="w-3 h-3" /> Low Stock</span>;
+  if (isExpiring)             return <span className="badge-amber"><Clock className="w-3 h-3" /> Expiring Soon</span>;
   return <span className="badge-green"><CheckCircle className="w-3 h-3" /> Good</span>;
 };
 
 const fmt = (dateStr) => {
   if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
 export default function MedicinesPage() {
-  const [medicines, setMedicines] = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [search, setSearch]       = useState('');
-  const [filter, setFilter]       = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [editMed, setEditMed]     = useState(null);
-  const [deleteMed, setDeleteMed] = useState(null);
-  const [deleting, setDeleting]   = useState(false);
+  const [medicines, setMedicines]           = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [search, setSearch]                 = useState('');
+  const [filter, setFilter]                 = useState('all');
+  const [showModal, setShowModal]           = useState(false);
+  const [editMed, setEditMed]               = useState(null);
+  const [deleteMed, setDeleteMed]           = useState(null);
+  const [deleting, setDeleting]             = useState(false);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const fetchMedicines = async () => {
     setLoading(true);
@@ -73,6 +75,20 @@ export default function MedicinesPage() {
     setDeleting(false);
   };
 
+  const handleGenerateReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const { generateInventoryReport } = await import('../services/inventoryReport.js');
+      const { data } = await api.get('/dashboard/stats');
+      await generateInventoryReport(data.data, medicines);
+      toast.success('Report downloaded successfully!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to generate report.');
+    }
+    setGeneratingReport(false);
+  };
+
   const filters = [
     { key: 'all',       label: 'All' },
     { key: 'low_stock', label: 'Low Stock' },
@@ -82,34 +98,32 @@ export default function MedicinesPage() {
 
   return (
     <div className="space-y-5 max-w-6xl">
-      {/* Header */}
-      <div className="flex items-center gap-2">
-  <button onClick={fetchMedicines} className="btn-secondary px-2.5 py-2">
-    <RefreshCw className="w-4 h-4" />
-  </button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Medicines</h1>
+          <p className="text-sm text-slate-500 mt-0.5">Manage your pharmacy inventory</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchMedicines} className="btn-secondary px-2.5 py-2">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleGenerateReport}
+            disabled={generatingReport || medicines.length === 0}
+            className="btn-secondary flex items-center gap-1.5 disabled:opacity-50"
+          >
+            <FileDown className="w-4 h-4" />
+            {generatingReport ? 'Generating…' : 'Download Report PPT'}
+          </button>
+          <button
+            onClick={() => { setEditMed(null); setShowModal(true); }}
+            className="btn-primary flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" /> Add Medicine
+          </button>
+        </div>
+      </div>
 
-  <button
-    onClick={handleGenerateReport}
-    disabled={generatingReport || medicines.length === 0}
-    className="btn-secondary flex items-center gap-1.5 disabled:opacity-50"
-  >
-    <FileDown className="w-4 h-4" />
-    {generatingReport ? 'Generating…' : 'Download Report PPT'}
-  </button>
-
-  <button
-    onClick={() => {
-      setEditMed(null);
-      setShowModal(true);
-    }}
-    className="btn-primary"
-  >
-    <Plus className="w-4 h-4" />
-    Add Medicine
-  </button>
-</div>
-
-      {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -138,7 +152,6 @@ export default function MedicinesPage() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="card overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
@@ -214,7 +227,6 @@ export default function MedicinesPage() {
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
         <MedicineModal
           medicine={editMed}
@@ -223,7 +235,6 @@ export default function MedicinesPage() {
         />
       )}
 
-      {/* Delete dialog */}
       {deleteMed && (
         <DeleteDialog
           medicine={deleteMed}
