@@ -83,20 +83,31 @@ export default function MedicinesPage() {
   return (
     <div className="space-y-5 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">Medicines</h1>
-          <p className="text-sm text-slate-500 mt-0.5">{medicines.length} total items</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchMedicines} className="btn-secondary px-2.5 py-2">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button onClick={() => { setEditMed(null); setShowModal(true); }} className="btn-primary">
-            <Plus className="w-4 h-4" /> Add Medicine
-          </button>
-        </div>
-      </div>
+      <div className="flex items-center gap-2">
+  <button onClick={fetchMedicines} className="btn-secondary px-2.5 py-2">
+    <RefreshCw className="w-4 h-4" />
+  </button>
+
+  <button
+    onClick={handleGenerateReport}
+    disabled={generatingReport || medicines.length === 0}
+    className="btn-secondary flex items-center gap-1.5 disabled:opacity-50"
+  >
+    <FileDown className="w-4 h-4" />
+    {generatingReport ? 'Generating…' : 'Download Report PPT'}
+  </button>
+
+  <button
+    onClick={() => {
+      setEditMed(null);
+      setShowModal(true);
+    }}
+    className="btn-primary"
+  >
+    <Plus className="w-4 h-4" />
+    Add Medicine
+  </button>
+</div>
 
       {/* Search & Filter */}
       <div className="flex flex-col sm:flex-row gap-3">
