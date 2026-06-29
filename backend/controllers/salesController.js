@@ -1,137 +1,97 @@
 const { pool } = require('../config/db');
+const { syncAlerts } = require('./medicineController');
 const { notifySaleCompleted } = require('../utils/whatsapp');
-const { sendSaleReceiptEmail } = require('../utils/emailReceipt');
 
-const checkout = async (req, res) => {
-  const connection = await pool.getConnection();
+const generateInvoiceNumber = () => {
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const randPart = Math.floor(1000 + Math.random() * 9000);
+  return `INV-${datePart}-${randPart}`;
+};
+
+const createSale = async (req, res) => {
+  const { customer_name, customer_phone, items } = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'At least one item is required.' });
+  }
+  const conn = await pool.getConnection();
   try {
-    await connection.beginTransaction();
-    const { customer_name, customer_phone, items } = req.body;
-    const created_by = req.user.id;
-
-    if (!items || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Cart is empty.' });
-    }
-
-    let total_amount = 0;
+    await conn.beginTransaction();
     const lineItems = [];
-
-    // Process items and validate stock
-    for (const item of items) {
-      const [meds] = await connection.query(
-        'SELECT * FROM medicines WHERE id = ? AND created_by = ? FOR UPDATE',
-        [item.medicine_id, created_by]
+    let totalAmount = 0;
+    for (const it of items) {
+      const [rows] = await conn.query(
+        'SELECT id, name, batch_number, stock_quantity, price FROM medicines WHERE id = ? AND created_by = ? FOR UPDATE',
+        [it.medicine_id, req.user.id]
       );
-
-      if (meds.length === 0) {
-        throw new Error(`Medicine ID ${item.medicine_id} not found.`);
-      }
-
-      const medicine = meds[0];
-      if (medicine.stock_quantity < item.quantity) {
-        throw new Error(`Insufficient stock for ${medicine.name}. Available: ${medicine.stock_quantity}`);
-      }
-
-      const subtotal = medicine.price * item.quantity;
-      total_amount += subtotal;
-
-      lineItems.push({
-        medicine_id: medicine.id,
-        quantity: item.quantity,
-        unit_price: medicine.price,
-        subtotal,
-        medicine: { name: medicine.name, batch_number: medicine.batch_number }
-      });
-
-      // Reduce stock balance
-      await connection.query(
-        'UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?',
-        [item.quantity, medicine.id]
-      );
+      if (rows.length === 0) { await conn.rollback(); return res.status(404).json({ success: false, message: `Medicine not found.` }); }
+      const med = rows[0];
+      const qty = Number(it.quantity);
+      if (med.stock_quantity < qty) { await conn.rollback(); return res.status(400).json({ success: false, message: `Not enough stock for "${med.name}".` }); }
+      const subtotal = Number(med.price) * qty;
+      totalAmount += subtotal;
+      lineItems.push({ medicine: med, quantity: qty, unit_price: Number(med.price), subtotal });
     }
-
-    // Create unique invoice number
-    const invoice_number = 'INV-' + Date.now();
-
-    // Insert sale record
-    const [saleResult] = await connection.query(
+    const invoiceNumber = generateInvoiceNumber();
+    const [saleResult] = await conn.query(
       'INSERT INTO sales (invoice_number, customer_name, customer_phone, total_amount, created_by) VALUES (?, ?, ?, ?, ?)',
-      [invoice_number, customer_name, customer_phone, total_amount, created_by]
+      [invoiceNumber, customer_name?.trim() || null, customer_phone?.trim() || null, totalAmount, req.user.id]
     );
-
-    const sale_id = saleResult.insertId;
-
-    // Insert line items
-    for (const line of lineItems) {
-      await connection.query(
-        'INSERT INTO sale_items (sale_id, medicine_id, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?)',
-        [sale_id, line.medicine_id, line.quantity, line.unit_price, line.subtotal]
+    const saleId = saleResult.insertId;
+    for (const li of lineItems) {
+      await conn.query(
+        'INSERT INTO sale_items (sale_id, medicine_id, medicine_name, quantity, unit_price, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
+        [saleId, li.medicine.id, li.medicine.name, li.quantity, li.unit_price, li.subtotal]
       );
+      await conn.query('UPDATE medicines SET stock_quantity = stock_quantity - ? WHERE id = ?', [li.quantity, li.medicine.id]);
     }
-
-    await connection.commit();
-
-    const completeSale = {
-      id: sale_id,
-      invoice_number,
-      customer_name,
-      customer_phone,
-      total_amount,
-      created_by
-    };
-
-    // Dispatch background notification handlers
-    notifySaleCompleted(completeSale).catch(() => {});
-    sendSaleReceiptEmail(completeSale, lineItems).catch(() => {});
-
+    await conn.commit();
+    for (const li of lineItems) {
+      const [fresh] = await pool.query('SELECT id, name, stock_quantity, expiry_date FROM medicines WHERE id = ?', [li.medicine.id]);
+      if (fresh.length) await syncAlerts(fresh[0]).catch(() => {});
+    }
+    const [saleRows] = await pool.query('SELECT * FROM sales WHERE id = ?', [saleId]);
+    const sale = saleRows[0];
+    notifySaleCompleted(sale).catch(() => {});
     res.status(201).json({
       success: true,
-      message: 'Checkout completed successfully.',
-      sale: completeSale,
-      items: lineItems
+      message: 'Sale completed successfully.',
+      data: { ...sale, items: lineItems.map((li) => ({
+        medicine_id: li.medicine.id,
+        medicine_name: li.medicine.name,
+        batch_number: li.medicine.batch_number,
+        quantity: li.quantity,
+        unit_price: li.unit_price,
+        subtotal: li.subtotal,
+      })) },
     });
-  } catch (error) {
-    await connection.rollback();
-    res.status(400).json({ success: false, message: error.message });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Create sale error:', err);
+    res.status(500).json({ success: false, message: 'Failed to complete sale.' });
   } finally {
-    connection.release();
+    conn.release();
   }
 };
 
-const getSales = async (req, res) => {
+const getAllSales = async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      'SELECT * FROM sales WHERE created_by = ? ORDER BY created_at DESC',
-      [req.user.id]
-    );
-    res.json(rows);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const [rows] = await pool.query('SELECT * FROM sales WHERE created_by = ? ORDER BY created_at DESC LIMIT 200', [req.user.id]);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch sales.' });
   }
 };
 
 const getSaleById = async (req, res) => {
   try {
-    const [sales] = await pool.query(
-      'SELECT * FROM sales WHERE id = ? AND created_by = ?',
-      [req.params.id, req.user.id]
-    );
-    if (sales.length === 0) {
-      return res.status(404).json({ success: false, message: 'Invoice record missing.' });
-    }
-
-    const [items] = await pool.query(
-      `SELECT si.*, m.name, m.batch_number 
-       FROM sale_items si 
-       JOIN medicines m ON si.medicine_id = m.id 
-       WHERE si.sale_id = ?`,
-      [req.params.id]
-    );
-
-    res.json({ sale: sales[0], items });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const [saleRows] = await pool.query('SELECT * FROM sales WHERE id = ? AND created_by = ?', [req.params.id, req.user.id]);
+    if (saleRows.length === 0) return res.status(404).json({ success: false, message: 'Sale not found.' });
+    const [items] = await pool.query('SELECT * FROM sale_items WHERE sale_id = ?', [req.params.id]);
+    res.json({ success: true, data: { ...saleRows[0], items } });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch sale.' });
   }
 };
 
-module.exports = { checkout, getSales, getSaleById };
+module.exports = { createSale, getAllSales, getSaleById };
