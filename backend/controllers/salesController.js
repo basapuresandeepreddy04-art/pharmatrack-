@@ -3,8 +3,7 @@ const { syncAlerts } = require('./medicineController');
 const { notifySaleCompleted } = require('../utils/whatsapp');
 
 const generateInvoiceNumber = () => {
-  const now = new Date();
-  const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
+  const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   const randPart = Math.floor(1000 + Math.random() * 9000);
   return `INV-${datePart}-${randPart}`;
 };
@@ -24,10 +23,16 @@ const createSale = async (req, res) => {
         'SELECT id, name, batch_number, stock_quantity, price FROM medicines WHERE id = ? AND created_by = ? FOR UPDATE',
         [it.medicine_id, req.user.id]
       );
-      if (rows.length === 0) { await conn.rollback(); return res.status(404).json({ success: false, message: `Medicine not found.` }); }
+      if (rows.length === 0) {
+        await conn.rollback();
+        return res.status(404).json({ success: false, message: `Medicine not found in your inventory.` });
+      }
       const med = rows[0];
       const qty = Number(it.quantity);
-      if (med.stock_quantity < qty) { await conn.rollback(); return res.status(400).json({ success: false, message: `Not enough stock for "${med.name}".` }); }
+      if (med.stock_quantity < qty) {
+        await conn.rollback();
+        return res.status(400).json({ success: false, message: `Not enough stock for "${med.name}". Available: ${med.stock_quantity}` });
+      }
       const subtotal = Number(med.price) * qty;
       totalAmount += subtotal;
       lineItems.push({ medicine: med, quantity: qty, unit_price: Number(med.price), subtotal });
@@ -56,14 +61,17 @@ const createSale = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Sale completed successfully.',
-      data: { ...sale, items: lineItems.map((li) => ({
-        medicine_id: li.medicine.id,
-        medicine_name: li.medicine.name,
-        batch_number: li.medicine.batch_number,
-        quantity: li.quantity,
-        unit_price: li.unit_price,
-        subtotal: li.subtotal,
-      })) },
+      data: {
+        ...sale,
+        items: lineItems.map((li) => ({
+          medicine_id: li.medicine.id,
+          medicine_name: li.medicine.name,
+          batch_number: li.medicine.batch_number,
+          quantity: li.quantity,
+          unit_price: li.unit_price,
+          subtotal: li.subtotal,
+        }))
+      },
     });
   } catch (err) {
     await conn.rollback();
@@ -76,7 +84,10 @@ const createSale = async (req, res) => {
 
 const getAllSales = async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM sales WHERE created_by = ? ORDER BY created_at DESC LIMIT 200', [req.user.id]);
+    const [rows] = await pool.query(
+      'SELECT * FROM sales WHERE created_by = ? ORDER BY created_at DESC LIMIT 200',
+      [req.user.id]
+    );
     res.json({ success: true, data: rows });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch sales.' });
@@ -85,7 +96,10 @@ const getAllSales = async (req, res) => {
 
 const getSaleById = async (req, res) => {
   try {
-    const [saleRows] = await pool.query('SELECT * FROM sales WHERE id = ? AND created_by = ?', [req.params.id, req.user.id]);
+    const [saleRows] = await pool.query(
+      'SELECT * FROM sales WHERE id = ? AND created_by = ?',
+      [req.params.id, req.user.id]
+    );
     if (saleRows.length === 0) return res.status(404).json({ success: false, message: 'Sale not found.' });
     const [items] = await pool.query('SELECT * FROM sale_items WHERE sale_id = ?', [req.params.id]);
     res.json({ success: true, data: { ...saleRows[0], items } });
